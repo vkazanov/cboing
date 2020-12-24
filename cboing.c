@@ -12,8 +12,8 @@
 #define HALF_WIDTH (WIDTH / 2)
 #define HALF_HEIGHT (HEIGHT / 2)
 
-#define PLAYER_SPEED 6
-#define MAX_AI_SPEED 6
+#define PLAYER_SPEED 3
+#define MAX_AI_SPEED 3
 
 /* TODO: rename or rework */
 /**
@@ -79,8 +79,8 @@ enum {
 } state = STATE_MENU;
 
 typedef struct actor_t actor_t;
-typedef void (actor_update_func)(actor_t *actor);
-typedef void (actor_draw_func)(actor_t *actor, SDL_Surface *target_surface);
+typedef void actor_update_func(actor_t *actor);
+typedef void actor_draw_func(actor_t *actor, SDL_Surface *target_surface);
 
 struct actor_t {
     media_t media;
@@ -104,13 +104,19 @@ void actor_draw(actor_t *actor, SDL_Surface *target_surface)
     SDL_BlitSurface(source_surface, NULL, target_surface, &target_rect);
 }
 
-typedef struct bat_t {
+typedef struct bat_t bat_t;
+
+typedef int move_func (void);
+
+struct bat_t {
     actor_t actor;
 
     int player;
     int score;
     int timer;
-} bat_t;
+
+    move_func *move;
+};
 
 void bat_update(actor_t *actor)
 {
@@ -118,10 +124,9 @@ void bat_update(actor_t *actor)
 
     bat->timer -= 1;
 
-    /* TODO: move func */
-    /* int y_movement = bat->move_func(bat); */
-    int y_movement = 0;
+    int y_movement = bat->move();
 
+    /* TODO: fix min/max positions */
     bat->actor.y = min(400, max(80, actor->y + y_movement));
 
     int frame = 0;
@@ -141,8 +146,11 @@ void bat_update(actor_t *actor)
     bat->actor.media = bat_to_media[bat->player] + frame;
 }
 
-void bat_init(bat_t *bat, int player)
+
+void bat_init(bat_t *bat, int player, move_func *move)
 {
+    bat->move = move;
+
     bat->actor.update = bat_update;
     bat->actor.draw = actor_draw;
 
@@ -181,10 +189,32 @@ typedef struct game_t {
 
 game_t game;
 
+int p1_move(void)
+{
+    int move = 0;
+    const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
+    if (keyboard_state[SDL_SCANCODE_Z] || keyboard_state[SDL_SCANCODE_DOWN])
+        move = PLAYER_SPEED;
+    else if (keyboard_state[SDL_SCANCODE_A] || keyboard_state[SDL_SCANCODE_UP])
+        move = -PLAYER_SPEED;
+    return move;
+}
+
+int p2_move(void)
+{
+    int move = 0;
+    const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
+    if (keyboard_state[SDL_SCANCODE_M])
+        move = PLAYER_SPEED;
+    else if (keyboard_state[SDL_SCANCODE_K])
+        move = -PLAYER_SPEED;
+    return move;
+}
+
 void game_reset(void)
 {
-    bat_init(&game.bats[0], 0);
-    bat_init(&game.bats[1], 1);
+    bat_init(&game.bats[0], 0, p1_move);
+    bat_init(&game.bats[1], 1, p2_move);
 
     /* TODO: ball */
     /* TODO: impacts */
