@@ -19,6 +19,7 @@ enum {
     MEDIA_MENU0,
     MEDIA_MENU1,
     MEDIA_OVER,
+    MEDIA_TABLE,
     MEDIA_NUM,
 };
 
@@ -26,6 +27,7 @@ char *media_to_path[MEDIA_NUM] = {
     [MEDIA_MENU0] = "images/menu0.png",
     [MEDIA_MENU1] = "images/menu1.png",
     [MEDIA_OVER] = "images/over.png",
+    [MEDIA_TABLE] = "images/table.png",
 };
 
 SDL_Surface *game_media[MEDIA_NUM];
@@ -36,6 +38,49 @@ enum {
     STATE_GAME_OVER = 3,
 } state = STATE_MENU;
 
+typedef struct bat_t {
+} bat_t;
+
+typedef struct ball_t {
+} ball_t;
+
+typedef struct impact_t {
+} impact_t;
+
+typedef struct game_t {
+    bat_t bats[2];
+    ball_t ball;
+    impact_t *impact_list;
+    int ai_offset;
+} game_t;
+
+
+void game_reset(void)
+{
+}
+
+void game_update(void)
+{
+}
+
+void game_draw(SDL_Surface *target_surface)
+{
+    /* background */
+    SDL_Surface *table_surface = game_media[MEDIA_TABLE];
+    SDL_BlitSurface(table_surface, NULL, target_surface, NULL);
+
+    /* 'just scored' */
+    /* TODO: */
+
+    /* bats, ball, impacts */
+    /* TODO: */
+
+    /* scores */
+    /* TODO: */
+
+}
+
+game_t game;
 int num_players = 1;
 bool space_down = false;
 
@@ -86,7 +131,8 @@ void update(void)
     switch (state) {
     case STATE_MENU: {
         if (space_pressed) {
-            /* TODO: switch to play state */
+            state = STATE_PLAY;
+            /* TODO: controls and game */
         } else {
             if (num_players == 2 && keyboard_state[SDL_SCANCODE_UP]) {
                 num_players = 1;
@@ -95,7 +141,8 @@ void update(void)
             }
         }
 
-        /* TODO: game update */
+        /* 'attract mode' update */
+        game_update();
         break;
     }
     case STATE_PLAY: {
@@ -113,7 +160,7 @@ void update(void)
 
 void draw(SDL_Surface *target_surface)
 {
-    /* TODO: game draw */
+    game_draw(target_surface);
 
     switch (state) {
     case STATE_MENU: {
@@ -156,10 +203,13 @@ int main(int argc, char *argv[])
     }
 
     SDL_Surface *screen_surface = SDL_GetWindowSurface(window);
+
     if (!load_media(screen_surface)) {
         fprintf(stderr, "Failed to load media files!");
         goto err_media;
     }
+
+    game_reset();
 
     bool quit = false;
     while (!quit) {
