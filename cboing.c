@@ -15,19 +15,59 @@
 #define PLAYER_SPEED 6
 #define MAX_AI_SPEED 6
 
-enum {
+/* TODO: rename or rework */
+/**
+ * container_of - cast a member of a structure out to the containing structure
+ * @ptr:	the pointer to the member.
+ * @type:	the type of the container struct this is embedded in.
+ * @member:	the name of the member within the struct.
+ *
+ */
+#define container_of(ptr, type, member) \
+    ({                                                                  \
+        const typeof( ((type *)0)->member ) *__mptr = (ptr);            \
+        (type *)( (char *)__mptr - offsetof(type,member) );             \
+    })
+
+int max(int a, int b) {
+    return a > b ? a : b;
+}
+
+int min(int a, int b) {
+    return a < b ? a : b;
+}
+
+typedef enum media_t {
     MEDIA_MENU0,
     MEDIA_MENU1,
     MEDIA_OVER,
     MEDIA_TABLE,
+    MEDIA_BLANK,
+
+    MEDIA_BAT00,
+    MEDIA_BAT01,
+    MEDIA_BAT02,
+
+    MEDIA_BAT10,
+    MEDIA_BAT11,
+    MEDIA_BAT12,
+
     MEDIA_NUM,
-};
+} media_t;
 
 char *media_to_path[MEDIA_NUM] = {
     [MEDIA_MENU0] = "images/menu0.png",
     [MEDIA_MENU1] = "images/menu1.png",
     [MEDIA_OVER] = "images/over.png",
     [MEDIA_TABLE] = "images/table.png",
+    [MEDIA_BLANK] = "images/blank.png",
+
+    [MEDIA_BAT00] = "images/bat00.png",
+    [MEDIA_BAT01] = "images/bat01.png",
+    [MEDIA_BAT02] = "images/bat02.png",
+    [MEDIA_BAT10] = "images/bat10.png",
+    [MEDIA_BAT11] = "images/bat11.png",
+    [MEDIA_BAT12] = "images/bat12.png",
 };
 
 SDL_Surface *game_media[MEDIA_NUM];
@@ -38,13 +78,98 @@ enum {
     STATE_GAME_OVER = 3,
 } state = STATE_MENU;
 
+typedef struct actor_t actor_t;
+typedef void (actor_update_func)(actor_t *actor);
+typedef void (actor_draw_func)(actor_t *actor, SDL_Surface *target_surface);
+
+struct actor_t {
+    media_t media;
+    int x;
+    int y;
+    int h;
+    int w;
+
+    actor_update_func *update;
+    actor_draw_func *draw;
+};
+
+
+void actor_draw(actor_t *actor, SDL_Surface *target_surface)
+{
+    SDL_Surface *source_surface = game_media[actor->media];
+    SDL_Rect target_rect = {
+        .x = actor->x,
+        .y = actor->y,
+    };
+    SDL_BlitSurface(source_surface, NULL, target_surface, &target_rect);
+}
+
 typedef struct bat_t {
+    actor_t actor;
+
+    int player;
+    int score;
+    int timer;
 } bat_t;
 
+void bat_update(actor_t *actor)
+{
+    bat_t *bat = container_of(actor, bat_t, actor);
+
+    bat->timer -= 1;
+
+    /* TODO: move func */
+    /* int y_movement = bat->move_func(bat); */
+    int y_movement = 0;
+
+    bat->actor.y = min(400, max(80, actor->y + y_movement));
+
+    int frame = 0;
+    if (bat->timer > 0) {
+        if (false) {
+            /* TODO: if game */
+            frame = 2;
+        } else {
+            frame = 1;
+        }
+    }
+
+    const int bat_to_media[] = {
+        [0] = MEDIA_BAT00,
+        [1] = MEDIA_BAT10,
+    };
+    bat->actor.media = bat_to_media[bat->player] + frame;
+}
+
+void bat_init(bat_t *bat, int player)
+{
+    bat->actor.update = bat_update;
+    bat->actor.draw = actor_draw;
+
+    bat->actor.media = MEDIA_BLANK;
+
+    /* TODO: this data is static, can be inlined in all places */
+    const int bat_half_width = game_media[MEDIA_BAT00]->w / 2;
+    const int bat_half_height = game_media[MEDIA_BAT00]->h / 2;
+
+    bat->actor.x = (player == 0) ? (40 - bat_half_width): (760 - bat_half_width);
+    bat->actor.y = HALF_HEIGHT - bat_half_height;
+
+    bat->player = player;
+    bat->score = 0;
+
+    /* TODO: move func */
+
+    bat->timer = 0;
+
+}
+
 typedef struct ball_t {
+    actor_t actor;
 } ball_t;
 
 typedef struct impact_t {
+    actor_t actor;
 } impact_t;
 
 typedef struct game_t {
@@ -54,13 +179,32 @@ typedef struct game_t {
     int ai_offset;
 } game_t;
 
+game_t game;
 
 void game_reset(void)
 {
+    bat_init(&game.bats[0], 0);
+    bat_init(&game.bats[1], 1);
+
+    /* TODO: ball */
+    /* TODO: impacts */
+
+    game.ai_offset = 0;
 }
 
 void game_update(void)
 {
+    /* TODO: it should be possible to just register actors instead of manually
+     * listing everything */
+    game.bats[0].actor.update(&game.bats[0].actor);
+    game.bats[1].actor.update(&game.bats[1].actor);
+
+    /* TODO: update ball*/
+    /* TODO: update impacts*/
+
+    /* TODO: drop expired impacts*/
+
+    /* TODO: ball out */
 }
 
 void game_draw(SDL_Surface *target_surface)
@@ -72,17 +216,17 @@ void game_draw(SDL_Surface *target_surface)
     /* 'just scored' */
     /* TODO: */
 
-    /* bats, ball, impacts */
+    /* TODO: should be possible to just draw known actors, same as above */
+    game.bats[0].actor.draw(&game.bats[0].actor, target_surface);
+    game.bats[1].actor.draw(&game.bats[1].actor, target_surface);
+
+    /* ball, impacts */
     /* TODO: */
 
     /* scores */
     /* TODO: */
 
 }
-
-game_t game;
-int num_players = 1;
-bool space_down = false;
 
 SDL_Surface *load_surface(const char *path, SDL_Surface *screen_surface)
 {
@@ -118,6 +262,10 @@ bool load_media(SDL_Surface *screen_surface)
     return success;
 }
 
+int num_players = 1;
+
+bool space_down = false;
+
 void update(void)
 {
 
@@ -147,11 +295,19 @@ void update(void)
     }
     case STATE_PLAY: {
         /* TODO */
+        if (max(game.bats[0].score, game.bats[0].score) > 9) {
+            state = STATE_GAME_OVER;
+        } else {
+            game_update();
+        }
         break;
     }
     case STATE_GAME_OVER: {
         if (space_pressed) {
-            /* TODO: reset to menu state */
+            state = STATE_MENU;
+            num_players = 1;
+
+            game_reset();
         }
         break;
     }
@@ -173,9 +329,7 @@ void draw(SDL_Surface *target_surface)
         SDL_BlitSurface(over_surface, NULL, target_surface, NULL);
         break;
     }
-    default:
-        /* NOTE: ignore here */
-        break;
+    default: break;
     }
 }
 
