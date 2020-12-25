@@ -122,6 +122,32 @@ struct bat_t {
     move_func *move;
 };
 
+typedef struct ball_t ball_t;
+
+typedef struct ball_t {
+    actor_t actor;
+    int dx;
+    int dy;
+    int speed;
+} ball_t;
+
+typedef struct game_t game_t;
+
+typedef struct impact_t {
+    actor_t actor;
+} impact_t;
+
+typedef struct game_t {
+    bat_t bats[2];
+    ball_t ball;
+    impact_t *impact_list;
+    int ai_offset;
+} game_t;
+
+game_t game;
+
+bool ball_out(ball_t *ball);
+
 void bat_update(actor_t *actor)
 {
     bat_t *bat = container_of(actor, bat_t, actor);
@@ -135,8 +161,7 @@ void bat_update(actor_t *actor)
 
     int frame = 0;
     if (bat->timer > 0) {
-        if (false) {
-            /* TODO: if game */
+        if (ball_out(&game.ball)) {
             frame = 2;
         } else {
             frame = 1;
@@ -176,16 +201,26 @@ void bat_init(bat_t *bat, int player, move_func *move)
 
 }
 
-typedef struct ball_t {
-    actor_t actor;
-    int dx;
-    int dy;
-    int speed;
-} ball_t;
-
 void ball_update(actor_t *actor)
 {
-    /* TODO: */
+    ball_t *ball = container_of(actor, ball_t, actor);
+
+    for (int i = 0; i < ball->speed; ++i) {
+        int original_x = actor->x;
+
+        actor->x += ball->dx;
+        actor->y += ball->dy;
+
+        /* TODO: check if hits a bat */
+
+        /* check if hits top or bottom */
+        if (abs(actor->y - HALF_HEIGHT) > 220) {
+            ball->dy = -ball->dy;
+            actor->y += ball->dy;
+        }
+
+    }
+
 }
 
 void ball_init(ball_t *ball, int dx)
@@ -201,18 +236,10 @@ void ball_init(ball_t *ball, int dx)
     ball->speed = 5;
 }
 
-typedef struct impact_t {
-    actor_t actor;
-} impact_t;
-
-typedef struct game_t {
-    bat_t bats[2];
-    ball_t ball;
-    impact_t *impact_list;
-    int ai_offset;
-} game_t;
-
-game_t game;
+bool ball_out(ball_t *ball)
+{
+    return ball->actor.x < 0 || ball->actor.x > WIDTH;
+}
 
 int p1_move(void)
 {
@@ -261,7 +288,19 @@ void game_update(void)
 
     /* TODO: drop expired impacts*/
 
-    /* TODO: ball out */
+    /* ball out */
+    if (ball_out(&game.ball)) {
+        int scoring_player = game.ball.actor.x < WIDTH / 2 ? 1 : 0;
+        int losing_player = 1 - scoring_player;
+
+        if (game.bats[losing_player].timer < 0) {
+            game.bats[scoring_player].score += 1;
+            game.bats[losing_player].timer = 20;
+        } else if (game.bats[losing_player].timer == 0) {
+            int direction = losing_player == 0 ? -1 : 1;
+            ball_init(&game.ball, direction);
+        }
+    }
 }
 
 void game_draw(SDL_Surface *target_surface)
@@ -339,6 +378,7 @@ void update(void)
         if (space_pressed) {
             state = STATE_PLAY;
             /* TODO: controls and game */
+            game_reset();
         } else {
             if (num_players == 2 && keyboard_state[SDL_SCANCODE_UP]) {
                 num_players = 1;
@@ -352,8 +392,7 @@ void update(void)
         break;
     }
     case STATE_PLAY: {
-        /* TODO */
-        if (max(game.bats[0].score, game.bats[0].score) > 9) {
+        if (max(game.bats[0].score, game.bats[1].score) > 9) {
             state = STATE_GAME_OVER;
         } else {
             game_update();
