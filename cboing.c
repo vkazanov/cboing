@@ -52,6 +52,8 @@ typedef enum media_t {
     MEDIA_BAT11,
     MEDIA_BAT12,
 
+    MEDIA_BALL,
+
     MEDIA_NUM,
 } media_t;
 
@@ -68,6 +70,8 @@ char *media_to_path[MEDIA_NUM] = {
     [MEDIA_BAT10] = "images/bat10.png",
     [MEDIA_BAT11] = "images/bat11.png",
     [MEDIA_BAT12] = "images/bat12.png",
+
+    [MEDIA_BALL] = "images/ball.png",
 };
 
 SDL_Surface *game_media[MEDIA_NUM];
@@ -174,7 +178,28 @@ void bat_init(bat_t *bat, int player, move_func *move)
 
 typedef struct ball_t {
     actor_t actor;
+    int dx;
+    int dy;
+    int speed;
 } ball_t;
+
+void ball_update(actor_t *actor)
+{
+    /* TODO: */
+}
+
+void ball_init(ball_t *ball, int dx)
+{
+    ball->actor.media = MEDIA_BALL;
+    ball->actor.update = ball_update;
+    ball->actor.draw = actor_draw;
+    ball->actor.x = HALF_WIDTH;
+    ball->actor.y = HALF_HEIGHT;
+
+    ball->dx = dx;
+    ball->dy = 0;
+    ball->speed = 5;
+}
 
 typedef struct impact_t {
     actor_t actor;
@@ -216,7 +241,9 @@ void game_reset(void)
     bat_init(&game.bats[0], 0, p1_move);
     bat_init(&game.bats[1], 1, p2_move);
 
-    /* TODO: ball */
+    ball_init(&game.ball, -1);
+
+
     /* TODO: impacts */
 
     game.ai_offset = 0;
@@ -228,8 +255,8 @@ void game_update(void)
      * listing everything */
     game.bats[0].actor.update(&game.bats[0].actor);
     game.bats[1].actor.update(&game.bats[1].actor);
+    game.ball.actor.update(&game.ball.actor);
 
-    /* TODO: update ball*/
     /* TODO: update impacts*/
 
     /* TODO: drop expired impacts*/
@@ -249,8 +276,9 @@ void game_draw(SDL_Surface *target_surface)
     /* TODO: should be possible to just draw known actors, same as above */
     game.bats[0].actor.draw(&game.bats[0].actor, target_surface);
     game.bats[1].actor.draw(&game.bats[1].actor, target_surface);
+    game.ball.actor.draw(&game.ball.actor, target_surface);
 
-    /* ball, impacts */
+    /* impacts */
     /* TODO: */
 
     /* scores */
