@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <math.h>
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -88,8 +89,8 @@ typedef void actor_draw_func(actor_t *actor, SDL_Surface *target_surface);
 
 struct actor_t {
     media_t media;
-    int x;
-    int y;
+    float x;
+    float y;
     int h;
     int w;
 
@@ -126,8 +127,8 @@ typedef struct ball_t ball_t;
 
 typedef struct ball_t {
     actor_t actor;
-    int dx;
-    int dy;
+    float dx;
+    float dy;
     int speed;
 } ball_t;
 
@@ -157,7 +158,7 @@ void bat_update(actor_t *actor)
     int y_movement = bat->move();
 
     /* TODO: fix min/max positions */
-    bat->actor.y = min(400, max(80, actor->y + y_movement));
+    bat->actor.y = fmin(400, fmax(80, actor->y + y_movement));
 
     int frame = 0;
     if (bat->timer > 0) {
@@ -201,20 +202,63 @@ void bat_init(bat_t *bat, int player, move_func *move)
 
 }
 
+void normalise(float *dx, float *dy)
+{
+    float length = hypotf(*dx, *dy);
+    fprintf(stderr, "%f %f -> %f %f\n", *dx, *dx, *dx / length, *dy / length);
+    *dx = *dx / length;
+    *dy = *dy / length;
+}
+
 void ball_update(actor_t *actor)
 {
     ball_t *ball = container_of(actor, ball_t, actor);
 
     for (int i = 0; i < ball->speed; ++i) {
-        int original_x = actor->x;
+        float original_x = actor->x;
 
         actor->x += ball->dx;
         actor->y += ball->dy;
 
-        /* TODO: check if hits a bat */
+        /* bounce a bat */
+        if (abs((int)actor->x - HALF_WIDTH) >= 344 && abs((int)original_x - HALF_WIDTH) < 344) {
 
-        /* check if hits top or bottom */
-        if (abs(actor->y - HALF_HEIGHT) > 220) {
+            bat_t *bat = NULL;
+            int new_dir_x;
+            if (actor->x < HALF_WIDTH) {
+                new_dir_x = 1;
+                bat = &game.bats[0];
+            } else {
+                new_dir_x = -1;
+                bat = &game.bats[1];
+            }
+
+            float difference_y = actor->y - bat->actor.y;
+
+            if (difference_y > -64 && difference_y < 64) {
+                /* collision happenned, find new direction vector */
+
+                ball->dx = -ball->dx;
+
+                ball->dy += difference_y / 128;
+
+                ball->dy = fmin(fmax(ball->dy, -1), 1);
+
+                normalise(&ball->dx, &ball->dy);
+
+                ball->speed += 1;
+
+                /* TODO: fix ai offset */
+
+                bat->timer = 10;
+
+                /* TODO: sound */
+                /* TODO: impacts */
+            }
+        }
+
+        /* check if hits arena top or bottom */
+        if (fabs(actor->y - HALF_HEIGHT) > 220) {
             ball->dy = -ball->dy;
             actor->y += ball->dy;
         }
@@ -233,7 +277,7 @@ void ball_init(ball_t *ball, int dx)
 
     ball->dx = dx;
     ball->dy = 0;
-    ball->speed = 5;
+    ball->speed = 3;
 }
 
 bool ball_out(ball_t *ball)
