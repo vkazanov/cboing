@@ -15,6 +15,7 @@
 
 #define PLAYER_SPEED 3
 #define MAX_AI_SPEED 3
+#define BALL_INIT_SPEED 2
 
 /* TODO: rename or rework */
 /**
@@ -157,8 +158,7 @@ void bat_update(actor_t *actor)
 
     int y_movement = bat->move();
 
-    /* TODO: fix min/max positions */
-    bat->actor.y = fmin(400, fmax(80, actor->y + y_movement));
+    actor->y = fmin(400 - actor->h / 2, fmax(0, actor->y + y_movement));
 
     int frame = 0;
     if (bat->timer > 0) {
@@ -192,6 +192,8 @@ void bat_init(bat_t *bat, int player, move_func *move)
 
     bat->actor.x = (player == 0) ? (40 - bat_half_width): (760 - bat_half_width);
     bat->actor.y = HALF_HEIGHT - bat_half_height;
+    bat->actor.w = game_media[MEDIA_BAT00]->w;
+    bat->actor.h = game_media[MEDIA_BAT00]->h;
 
     bat->player = player;
     bat->score = 0;
@@ -205,7 +207,6 @@ void bat_init(bat_t *bat, int player, move_func *move)
 void normalise(float *dx, float *dy)
 {
     float length = hypotf(*dx, *dy);
-    fprintf(stderr, "%f %f -> %f %f\n", *dx, *dx, *dx / length, *dy / length);
     *dx = *dx / length;
     *dy = *dy / length;
 }
@@ -233,7 +234,7 @@ void ball_update(actor_t *actor)
                 bat = &game.bats[1];
             }
 
-            float difference_y = actor->y - bat->actor.y;
+            float difference_y = (actor->y + actor->h / 2) - (bat->actor.y + bat->actor.h / 2);
 
             if (difference_y > -64 && difference_y < 64) {
                 /* collision happenned, find new direction vector */
@@ -274,10 +275,12 @@ void ball_init(ball_t *ball, int dx)
     ball->actor.draw = actor_draw;
     ball->actor.x = HALF_WIDTH;
     ball->actor.y = HALF_HEIGHT;
+    ball->actor.w = game_media[MEDIA_BALL]->w;
+    ball->actor.h = game_media[MEDIA_BALL]->h;
 
     ball->dx = dx;
     ball->dy = 0;
-    ball->speed = 3;
+    ball->speed = BALL_INIT_SPEED;
 }
 
 bool ball_out(ball_t *ball)
@@ -484,7 +487,7 @@ int main(int argc, char *argv[])
     }
 
     if(!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
-        printf( "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
+        fprintf(stderr, "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
         goto err_img;
     }
 
