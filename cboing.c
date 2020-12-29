@@ -188,14 +188,13 @@ void bat_init(bat_t *bat, int player, move_func *move)
 
     bat->actor.media = MEDIA_BLANK;
 
-    /* TODO: this data is static, can be inlined in all places */
-    const int bat_half_width = game_media[MEDIA_BAT00]->w / 2;
-    const int bat_half_height = game_media[MEDIA_BAT00]->h / 2;
+    const int img_half_width = game_media[MEDIA_BAT00]->w / 2;
+    const int img_half_height = game_media[MEDIA_BAT00]->h / 2;
 
-    bat->actor.x = (player == 0) ? (40 - bat_half_width): (760 - bat_half_width);
-    bat->actor.y = HALF_HEIGHT - bat_half_height;
-    bat->actor.w = game_media[MEDIA_BAT00]->w;
-    bat->actor.h = game_media[MEDIA_BAT00]->h;
+    bat->actor.x = (player == 0) ? (40 - img_half_width): (760 - img_half_width);
+    bat->actor.y = HALF_HEIGHT - img_half_height;
+    bat->actor.w = 18;
+    bat->actor.h = 128;
 
     bat->player = player;
     bat->score = 0;
@@ -224,7 +223,7 @@ void ball_update(actor_t *actor)
         actor->y += ball->dy;
 
         /* bounce a bat */
-        if (abs((int)actor->x - HALF_WIDTH) >= 344 && abs((int)original_x - HALF_WIDTH) < 344) {
+        if (abs((int)(actor->x + actor->w / 2)- HALF_WIDTH) >= 344 && abs((int)(original_x + actor->w / 2)- HALF_WIDTH) < 344) {
 
             bat_t *bat = NULL;
             int new_dir_x;
@@ -236,9 +235,8 @@ void ball_update(actor_t *actor)
                 bat = &game.bats[1];
             }
 
-            float difference_y = (actor->y + actor->h / 2) - (bat->actor.y + bat->actor.h / 2);
-
-            if (difference_y > -64 && difference_y < 64) {
+            float difference_y = actor->y - bat->actor.y;
+            if (difference_y >= 0 && difference_y < bat->actor.h) {
                 /* collision happenned, find new direction vector */
 
                 ball->dx = -ball->dx;
@@ -249,7 +247,7 @@ void ball_update(actor_t *actor)
 
                 normalise(&ball->dx, &ball->dy);
 
-                /* TODO: limit speed */
+                /* TODO: cap speed */
                 ball->speed += 1;
 
                 /* TODO: fix ai offset */
@@ -278,8 +276,8 @@ void ball_init(ball_t *ball, int dx)
     ball->actor.draw = actor_draw;
     ball->actor.x = HALF_WIDTH;
     ball->actor.y = HALF_HEIGHT;
-    ball->actor.w = game_media[MEDIA_BALL]->w;
-    ball->actor.h = game_media[MEDIA_BALL]->h;
+    ball->actor.w = 14;
+    ball->actor.h = 14;
 
     ball->dx = dx;
     ball->dy = 0;
