@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <math.h>
+#include <time.h>
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -15,8 +16,8 @@
 #define HALF_WIDTH (WIDTH / 2)
 #define HALF_HEIGHT (HEIGHT / 2)
 
-#define PLAYER_SPEED 3
-#define MAX_AI_SPEED 3
+#define PLAYER_SPEED 4
+#define MAX_AI_SPEED 4
 #define BALL_INIT_SPEED 5
 
 /* TODO: rename or rework */
@@ -183,7 +184,7 @@ void actor_draw(actor_t *actor, SDL_Surface *target_surface)
 
 typedef struct bat_t bat_t;
 
-typedef int move_func (void);
+typedef int bat_move_func (bat_t *bat);
 
 struct bat_t {
     actor_t actor;
@@ -192,7 +193,7 @@ struct bat_t {
     int score;
     int timer;
 
-    move_func *move;
+    bat_move_func *move;
 };
 
 typedef struct ball_t ball_t;
@@ -227,7 +228,7 @@ void bat_update(actor_t *actor)
 
     bat->timer -= 1;
 
-    int y_movement = bat->move();
+    int y_movement = bat->move(bat);
 
     actor->y = fmin(400 - actor->h / 2, fmax(0, actor->y + y_movement));
 
@@ -247,11 +248,25 @@ void bat_update(actor_t *actor)
     bat->actor.media = bat_to_media[bat->player] + frame;
 }
 
-
-void bat_init(bat_t *bat, int player, move_func *move)
+int bat_ai_move(bat_t *bat)
 {
-    bat->move = move;
+    float x_distance = fabs((game.ball.actor.x + game.ball.actor.w / 2) -
+                            (bat->actor.x + bat->actor.w / 2));
 
+    int target_y_1 = HALF_HEIGHT;
+
+    int target_y_2 = game.ball.actor.y + game.ball.actor.h / 2 + game.ai_offset;
+
+    float weight1 = min(1, x_distance / HALF_WIDTH);
+    float weight2 = 1 - weight1;
+
+    float target_y = (weight1 * target_y_1) + (weight2 * target_y_2);
+
+    return min(MAX_AI_SPEED, max(-MAX_AI_SPEED, target_y - (bat->actor.y + bat->actor.h / 2)));
+}
+
+void bat_init(bat_t *bat, int player, bat_move_func *move)
+{
     bat->actor.update = bat_update;
     bat->actor.draw = actor_draw;
 
@@ -268,7 +283,7 @@ void bat_init(bat_t *bat, int player, move_func *move)
     bat->player = player;
     bat->score = 0;
 
-    /* TODO: move func */
+    bat->move = move ? move : bat_ai_move;
 
     bat->timer = 0;
 
@@ -319,7 +334,7 @@ void ball_update(actor_t *actor)
                 /* TODO: cap speed */
                 ball->speed += 1;
 
-                /* TODO: fix ai offset */
+                game.ai_offset = (rand() % 20) - 10;
 
                 bat->timer = 10;
 
@@ -358,8 +373,10 @@ bool ball_out(ball_t *ball)
     return ball->actor.x < 0 || ball->actor.x > WIDTH;
 }
 
-int p1_move(void)
+int p1_move(bat_t *bat)
 {
+    (void) bat;
+
     int move = 0;
     const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
     if (keyboard_state[SDL_SCANCODE_Z] || keyboard_state[SDL_SCANCODE_DOWN])
@@ -369,8 +386,10 @@ int p1_move(void)
     return move;
 }
 
-int p2_move(void)
+int p2_move(bat_t *bat)
 {
+    (void) bat;
+
     int move = 0;
     const Uint8 *keyboard_state = SDL_GetKeyboardState(NULL);
     if (keyboard_state[SDL_SCANCODE_M])
@@ -380,10 +399,10 @@ int p2_move(void)
     return move;
 }
 
-void game_reset(void)
+void game_reset(bat_move_func *p1_controls, bat_move_func *p2_controls)
 {
-    bat_init(&game.bats[0], 0, p1_move);
-    bat_init(&game.bats[1], 1, p2_move);
+    bat_init(&game.bats[0], 0, p1_controls);
+    bat_init(&game.bats[1], 1, p2_controls);
 
     ball_init(&game.ball, -1);
 
@@ -529,8 +548,7 @@ void update(void)
     case STATE_MENU: {
         if (space_pressed) {
             state = STATE_PLAY;
-            /* TODO: set game controls */
-            game_reset();
+            game_reset(p1_move, num_players == 2 ? p2_move : NULL);
         } else {
             if (num_players == 2 && keyboard_state[SDL_SCANCODE_UP]) {
                 num_players = 1;
@@ -556,7 +574,7 @@ void update(void)
             state = STATE_MENU;
             num_players = 1;
 
-            game_reset();
+            game_reset(NULL, NULL);
         }
         break;
     }
@@ -585,6 +603,7 @@ void draw(SDL_Surface *target_surface)
 int main(int argc, char *argv[])
 {
     (void) argc; (void) argv;
+    srand(time(NULL));
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
@@ -612,7 +631,7 @@ int main(int argc, char *argv[])
         goto err_media;
     }
 
-    game_reset();
+    game_reset(NULL, NULL);
 
     uint32_t last_time = 0;
     bool quit = false;
