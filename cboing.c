@@ -61,6 +61,37 @@ typedef enum media_t {
     MEDIA_EFFECT0,
     MEDIA_EFFECT1,
 
+    MEDIA_DIGIT00,
+    MEDIA_DIGIT01,
+    MEDIA_DIGIT02,
+    MEDIA_DIGIT03,
+    MEDIA_DIGIT04,
+    MEDIA_DIGIT05,
+    MEDIA_DIGIT06,
+    MEDIA_DIGIT07,
+    MEDIA_DIGIT08,
+    MEDIA_DIGIT09,
+    MEDIA_DIGIT10,
+    MEDIA_DIGIT11,
+    MEDIA_DIGIT12,
+    MEDIA_DIGIT13,
+    MEDIA_DIGIT14,
+    MEDIA_DIGIT15,
+    MEDIA_DIGIT16,
+    MEDIA_DIGIT17,
+    MEDIA_DIGIT18,
+    MEDIA_DIGIT19,
+    MEDIA_DIGIT20,
+    MEDIA_DIGIT21,
+    MEDIA_DIGIT22,
+    MEDIA_DIGIT23,
+    MEDIA_DIGIT24,
+    MEDIA_DIGIT25,
+    MEDIA_DIGIT26,
+    MEDIA_DIGIT27,
+    MEDIA_DIGIT28,
+    MEDIA_DIGIT29,
+
     MEDIA_NUM,
 } media_t;
 
@@ -82,6 +113,38 @@ char *media_to_path[MEDIA_NUM] = {
 
     [MEDIA_EFFECT0] = "images/effect0.png",
     [MEDIA_EFFECT1] = "images/effect1.png",
+
+    [MEDIA_DIGIT00] = "images/digit00.png",
+    [MEDIA_DIGIT01] = "images/digit01.png",
+    [MEDIA_DIGIT02] = "images/digit02.png",
+    [MEDIA_DIGIT03] = "images/digit03.png",
+    [MEDIA_DIGIT04] = "images/digit04.png",
+    [MEDIA_DIGIT05] = "images/digit05.png",
+    [MEDIA_DIGIT06] = "images/digit06.png",
+    [MEDIA_DIGIT07] = "images/digit07.png",
+    [MEDIA_DIGIT08] = "images/digit08.png",
+    [MEDIA_DIGIT09] = "images/digit09.png",
+    [MEDIA_DIGIT10] = "images/digit10.png",
+    [MEDIA_DIGIT11] = "images/digit11.png",
+    [MEDIA_DIGIT12] = "images/digit12.png",
+    [MEDIA_DIGIT13] = "images/digit13.png",
+    [MEDIA_DIGIT14] = "images/digit14.png",
+    [MEDIA_DIGIT15] = "images/digit15.png",
+    [MEDIA_DIGIT16] = "images/digit16.png",
+    [MEDIA_DIGIT17] = "images/digit17.png",
+    [MEDIA_DIGIT18] = "images/digit18.png",
+    [MEDIA_DIGIT19] = "images/digit19.png",
+    [MEDIA_DIGIT20] = "images/digit20.png",
+    [MEDIA_DIGIT21] = "images/digit21.png",
+    [MEDIA_DIGIT22] = "images/digit22.png",
+    [MEDIA_DIGIT23] = "images/digit23.png",
+    [MEDIA_DIGIT24] = "images/digit24.png",
+    [MEDIA_DIGIT25] = "images/digit25.png",
+    [MEDIA_DIGIT26] = "images/digit26.png",
+    [MEDIA_DIGIT27] = "images/digit27.png",
+    [MEDIA_DIGIT28] = "images/digit28.png",
+    [MEDIA_DIGIT29] = "images/digit29.png",
+
 };
 
 SDL_Surface *game_media[MEDIA_NUM];
@@ -380,7 +443,37 @@ void game_draw(SDL_Surface *target_surface)
     /* TODO: */
 
     /* scores */
-    /* TODO: */
+    int color = 0;
+    const int color_to_base[] = {
+        [0] = MEDIA_DIGIT00,
+        [1] = MEDIA_DIGIT10,
+        [2] = MEDIA_DIGIT20,
+    };
+
+    {
+        if (game.bats[0].timer && ball_out(&game.ball))
+            color = 2; /* if player=0 */
+        SDL_Surface *digit_surface = game_media[color_to_base[color]];
+        SDL_Rect target_rect = { .x = 255 + 160 * 0 + 0 * 55, .y = 46 };
+        SDL_BlitSurface(digit_surface, NULL, target_surface, &target_rect);
+
+        digit_surface = game_media[color_to_base[color] + game.bats[0].score];
+        target_rect = (SDL_Rect){ .x = 255 + 160 * 0 + 1 * 55, .y = 46 };
+        SDL_BlitSurface(digit_surface, NULL, target_surface, &target_rect);
+    }
+
+    {
+        if (game.bats[1].timer && ball_out(&game.ball))
+            color = 1;          /* if player=1 */
+        SDL_Surface *digit_surface = game_media[color_to_base[color]];
+        SDL_Rect target_rect = { .x = 255 + 160 * 1 + 0 * 55, .y = 46 };
+        SDL_BlitSurface(digit_surface, NULL, target_surface, &target_rect);
+
+        digit_surface = game_media[color_to_base[color] + game.bats[1].score];
+        target_rect = (SDL_Rect){ .x = 255 + 160 * 1 + 1 * 55, .y = 46 };
+        SDL_BlitSurface(digit_surface, NULL, target_surface, &target_rect);
+    }
+
 
 }
 
