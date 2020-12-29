@@ -58,6 +58,9 @@ typedef enum media_t {
 
     MEDIA_BALL,
 
+    MEDIA_EFFECT0,
+    MEDIA_EFFECT1,
+
     MEDIA_NUM,
 } media_t;
 
@@ -76,6 +79,9 @@ char *media_to_path[MEDIA_NUM] = {
     [MEDIA_BAT12] = "images/bat12.png",
 
     [MEDIA_BALL] = "images/ball.png",
+
+    [MEDIA_EFFECT0] = "images/effect0.png",
+    [MEDIA_EFFECT1] = "images/effect1.png",
 };
 
 SDL_Surface *game_media[MEDIA_NUM];
@@ -356,7 +362,14 @@ void game_draw(SDL_Surface *target_surface)
     SDL_BlitSurface(table_surface, NULL, target_surface, NULL);
 
     /* 'just scored' */
-    /* TODO: */
+    if (game.bats[0].timer && ball_out(&game.ball)) {
+        SDL_Surface *effect_surface = game_media[MEDIA_EFFECT0];
+        SDL_BlitSurface(effect_surface, NULL, target_surface, NULL);
+    }
+    if (game.bats[1].timer && ball_out(&game.ball)) {
+        SDL_Surface *effect_surface = game_media[MEDIA_EFFECT1];
+        SDL_BlitSurface(effect_surface, NULL, target_surface, NULL);
+    }
 
     /* TODO: should be possible to just draw known actors, same as above */
     game.bats[0].actor.draw(&game.bats[0].actor, target_surface);
