@@ -6,6 +6,7 @@
 
 #include <SDL.h>
 #include <SDL_image.h>
+#include <SDL_mixer.h>
 
 #define FRAMES_PER_SECOND 30
 #define MS_PER_FRAME 1000 / FRAMES_PER_SECOND
@@ -149,6 +150,7 @@ char *media_to_path[MEDIA_NUM] = {
 };
 
 SDL_Surface *game_media[MEDIA_NUM];
+Mix_Music *game_music;
 
 enum {
     STATE_MENU = 1,
@@ -527,6 +529,10 @@ bool load_media(SDL_Surface *screen_surface)
         game_media[i] = surface;
     }
 
+    game_music = Mix_LoadMUS("music/theme.ogg");
+    if (!game_music)
+        success = false;
+
     return success;
 }
 
@@ -605,7 +611,7 @@ int main(int argc, char *argv[])
     (void) argc; (void) argv;
     srand(time(NULL));
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         goto err_init;
     }
@@ -613,6 +619,12 @@ int main(int argc, char *argv[])
     if(!(IMG_Init(IMG_INIT_PNG) & IMG_INIT_PNG)) {
         fprintf(stderr, "SDL_image could not initialize! SDL_image Error: %s\n", IMG_GetError() );
         goto err_img;
+    }
+
+    if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
+    {
+        fprintf(stderr, "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() );
+        goto err_mix;
     }
 
     SDL_Window *window = SDL_CreateWindow(
@@ -630,6 +642,8 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to load media files!");
         goto err_media;
     }
+
+    Mix_PlayMusic(game_music, -1);
 
     game_reset(NULL, NULL);
 
@@ -659,11 +673,13 @@ int main(int argc, char *argv[])
     return EXIT_SUCCESS;
 
 err_media:
-err_window:
     SDL_DestroyWindow(window);
+err_window:
+    Mix_Quit();
+err_mix:
 err_img:
-err_init:
     SDL_Quit();
+err_init:
 
     return EXIT_FAILURE;
 }
