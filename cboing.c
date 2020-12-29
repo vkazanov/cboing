@@ -6,6 +6,8 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
+#define FRAMES_PER_SECOND 30
+#define MS_PER_FRAME 1000 / FRAMES_PER_SECOND
 #define HEIGHT 480
 #define WIDTH 800
 #define TITLE "CBoing!"
@@ -15,7 +17,7 @@
 
 #define PLAYER_SPEED 3
 #define MAX_AI_SPEED 3
-#define BALL_INIT_SPEED 2
+#define BALL_INIT_SPEED 5
 
 /* TODO: rename or rework */
 /**
@@ -247,6 +249,7 @@ void ball_update(actor_t *actor)
 
                 normalise(&ball->dx, &ball->dy);
 
+                /* TODO: limit speed */
                 ball->speed += 1;
 
                 /* TODO: fix ai offset */
@@ -317,9 +320,7 @@ void game_reset(void)
 
     ball_init(&game.ball, -1);
 
-
-    /* TODO: impacts */
-
+    game.impact_list = NULL;
     game.ai_offset = 0;
 }
 
@@ -424,7 +425,7 @@ void update(void)
     case STATE_MENU: {
         if (space_pressed) {
             state = STATE_PLAY;
-            /* TODO: controls and game */
+            /* TODO: set game controls */
             game_reset();
         } else {
             if (num_players == 2 && keyboard_state[SDL_SCANCODE_UP]) {
@@ -509,6 +510,7 @@ int main(int argc, char *argv[])
 
     game_reset();
 
+    uint32_t last_time = 0;
     bool quit = false;
     while (!quit) {
         SDL_Event e;
@@ -520,6 +522,12 @@ int main(int argc, char *argv[])
         update();
         draw(screen_surface);
         SDL_UpdateWindowSurface(window);
+
+        /* frame rate limit */
+        uint32_t current_time = SDL_GetTicks();
+        if (current_time - last_time < MS_PER_FRAME)
+            SDL_Delay(current_time - last_time);
+        last_time = current_time;
     }
 
     SDL_DestroyWindow(window);
