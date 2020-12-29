@@ -149,8 +149,53 @@ char *media_to_path[MEDIA_NUM] = {
 
 };
 
+typedef enum sound_t {
+    SOUND_BOUNCE0,
+    SOUND_BOUNCE1,
+    SOUND_BOUNCE2,
+    SOUND_BOUNCE3,
+    SOUND_BOUNCE4,
+    SOUND_BOUNCE_SYNTH0,
+
+    SOUND_HIT0,
+    SOUND_HIT1,
+    SOUND_HIT2,
+    SOUND_HIT3,
+    SOUND_HIT4,
+    SOUND_HIT_SLOW0,
+    SOUND_HIT_MEDIUM0,
+    SOUND_HIT_FAST0,
+    SOUND_HIT_VERYFAST0,
+
+    SOUND_SCORE_GOAL,
+
+    SOUND_NUM,
+} sound_t;
+
+char *sound_to_path[MEDIA_NUM] = {
+    [SOUND_BOUNCE0] = "sounds/bounce0.ogg",
+    [SOUND_BOUNCE1] = "sounds/bounce1.ogg",
+    [SOUND_BOUNCE2] = "sounds/bounce2.ogg",
+    [SOUND_BOUNCE3] = "sounds/bounce3.ogg",
+    [SOUND_BOUNCE4] = "sounds/bounce4.ogg",
+    [SOUND_BOUNCE_SYNTH0] = "sounds/bounce_synth0.ogg",
+
+    [SOUND_HIT0] = "sounds/hit0.ogg",
+    [SOUND_HIT1] = "sounds/hit1.ogg",
+    [SOUND_HIT2] = "sounds/hit2.ogg",
+    [SOUND_HIT3] = "sounds/hit3.ogg",
+    [SOUND_HIT4] = "sounds/hit4.ogg",
+    [SOUND_HIT_SLOW0] = "sounds/hit_slow0.ogg",
+    [SOUND_HIT_MEDIUM0] = "sounds/hit_medium0.ogg",
+    [SOUND_HIT_FAST0] = "sounds/hit_fast0.ogg",
+    [SOUND_HIT_VERYFAST0] = "sounds/hit_veryfast0.ogg",
+
+    [SOUND_SCORE_GOAL] = "sounds/score_goal0.ogg",
+};
+
 SDL_Surface *game_media[MEDIA_NUM];
 Mix_Music *game_music;
+Mix_Chunk *game_sounds[SOUND_NUM];
 
 enum {
     STATE_MENU = 1,
@@ -298,6 +343,8 @@ void normalise(float *dx, float *dy)
     *dy = *dy / length;
 }
 
+void game_play_sound(sound_t name, int count);
+
 void ball_update(actor_t *actor)
 {
     ball_t *ball = container_of(actor, ball_t, actor);
@@ -340,8 +387,15 @@ void ball_update(actor_t *actor)
 
                 bat->timer = 10;
 
-                /* TODO: sound */
-                /* TODO: impacts */
+                game_play_sound(SOUND_HIT0, 5);
+                if (ball->speed <= 10)
+                    game_play_sound(SOUND_HIT_SLOW0, 1);
+                else if (ball->speed <= 12)
+                    game_play_sound(SOUND_HIT_MEDIUM0, 1);
+                else if (ball->speed <= 16)
+                    game_play_sound(SOUND_HIT_FAST0, 1);
+                else
+                    game_play_sound(SOUND_HIT_VERYFAST0, 1);
             }
         }
 
@@ -349,6 +403,9 @@ void ball_update(actor_t *actor)
         if (fabs(actor->y - HALF_HEIGHT) > 220) {
             ball->dy = -ball->dy;
             actor->y += ball->dy;
+
+            game_play_sound(SOUND_BOUNCE0, 5);
+            game_play_sound(SOUND_BOUNCE_SYNTH0, 1);
         }
 
     }
@@ -412,6 +469,15 @@ void game_reset(bat_move_func *p1_controls, bat_move_func *p2_controls)
     game.ai_offset = 0;
 }
 
+void game_play_sound(sound_t name, int count)
+{
+    if (game.bats[0].move == bat_ai_move)
+        return;
+
+    uint32_t offset = (unsigned)(rand() % count);
+    Mix_PlayChannel( -1, game_sounds[name + offset], 0 );
+}
+
 void game_update(void)
 {
     /* TODO: it should be possible to just register actors instead of manually
@@ -431,6 +497,9 @@ void game_update(void)
 
         if (game.bats[losing_player].timer < 0) {
             game.bats[scoring_player].score += 1;
+
+            game_play_sound(SOUND_SCORE_GOAL, 1);
+
             game.bats[losing_player].timer = 20;
         } else if (game.bats[losing_player].timer == 0) {
             int direction = losing_player == 0 ? -1 : 1;
@@ -532,6 +601,13 @@ bool load_media(SDL_Surface *screen_surface)
     game_music = Mix_LoadMUS("music/theme.ogg");
     if (!game_music)
         success = false;
+
+    for (int i = 0; i < SOUND_NUM; ++i){
+        Mix_Chunk * sample = Mix_LoadWAV(sound_to_path[i]);
+        if (!sample)
+            success = false;
+        game_sounds[i] = sample;
+    }
 
     return success;
 }
@@ -644,6 +720,7 @@ int main(int argc, char *argv[])
     }
 
     Mix_PlayMusic(game_music, -1);
+    Mix_VolumeMusic(MIX_MAX_VOLUME/4);
 
     game_reset(NULL, NULL);
 
