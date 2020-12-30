@@ -16,7 +16,7 @@ Boing! itself is a modernised [[https://en.wikipedia.org/wiki/Pong][Pong]].
   #+begin_src shell-script
     cd cboing
     make
-    ./cboing/
+    ./cboing
   #+end_src
 
 * Playing
@@ -26,3 +26,9 @@ Boing! itself is a modernised [[https://en.wikipedia.org/wiki/Pong][Pong]].
   Controls for player 1: =up/down= or =a/z=.
 
   Controls for player 2: =m/k=.
+
+* License
+
+  The code is free for all to use.
+
+  Assets are https://creativecommons.org/licenses/by-nc-sa/3.0/.
