@@ -1,0 +1,28 @@
+A pure C and libSDL port of a game Boing! from the very cute [[https://github.com/Wireframe-Magazine/Code-the-Classics][Code the Classics]] book.
+Boing! itself is a modernised [[https://en.wikipedia.org/wiki/Pong][Pong]].
+
+* Motivation
+
+  I wanted to play with SDL a bit but did not want to think about game design and assets
+  issues. Code the Classics comes with a Github repo containing code in Python using the
+  Pygame Zero, images, sounds and music I only had to port the logic itself.
+
+* Compiling
+
+  I developed the port using GCC 9.3.0 and the popular libSDL 2.x, SDL_Mixer, SDL_Image
+  libraries on Ubuntu 20.04. Having all of the libraries installed the following should
+  work:
+
+  #+begin_src shell-script
+    cd cboing
+    make
+    ./cboing/
+  #+end_src
+
+* Playing
+
+  Pick a number of players.
+
+  Controls for player 1: =up/down= or =a/z=.
+
+  Controls for player 2: =m/k=.
