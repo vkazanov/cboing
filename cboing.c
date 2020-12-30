@@ -21,14 +21,6 @@
 #define MAX_AI_SPEED 4
 #define BALL_INIT_SPEED 5
 
-/* TODO: rename or rework */
-/**
- * container_of - cast a member of a structure out to the containing structure
- * @ptr:	the pointer to the member.
- * @type:	the type of the container struct this is embedded in.
- * @member:	the name of the member within the struct.
- *
- */
 #define container_of(ptr, type, member) \
     ({                                                                  \
         const typeof( ((type *)0)->member ) *__mptr = (ptr);            \
@@ -94,6 +86,12 @@ typedef enum media_t {
     MEDIA_DIGIT28,
     MEDIA_DIGIT29,
 
+    MEDIA_IMPACT0,
+    MEDIA_IMPACT1,
+    MEDIA_IMPACT2,
+    MEDIA_IMPACT3,
+    MEDIA_IMPACT4,
+
     MEDIA_NUM,
 } media_t;
 
@@ -147,6 +145,11 @@ char *media_to_path[MEDIA_NUM] = {
     [MEDIA_DIGIT28] = "images/digit28.png",
     [MEDIA_DIGIT29] = "images/digit29.png",
 
+    [MEDIA_IMPACT0] = "images/impact0.png",
+    [MEDIA_IMPACT1] = "images/impact1.png",
+    [MEDIA_IMPACT2] = "images/impact2.png",
+    [MEDIA_IMPACT3] = "images/impact3.png",
+    [MEDIA_IMPACT4] = "images/impact4.png",
 };
 
 typedef enum sound_t {
@@ -252,11 +255,16 @@ typedef struct ball_t {
     int speed;
 } ball_t;
 
-typedef struct game_t game_t;
+typedef struct impact_t impact_t;
 
-typedef struct impact_t {
+struct impact_t {
     actor_t actor;
-} impact_t;
+    int time;
+
+    impact_t *next;
+};
+
+typedef struct game_t game_t;
 
 typedef struct game_t {
     bat_t bats[2];
@@ -266,6 +274,25 @@ typedef struct game_t {
 } game_t;
 
 game_t game;
+
+void impact_init(impact_t *impact, float x, float y)
+{
+    impact->actor.media = MEDIA_BLANK;
+    impact->actor.draw = actor_draw;
+    impact->actor.x = x;
+    impact->actor.y = y;
+
+    impact->time = 0;
+
+    impact->next = NULL;
+}
+
+void impact_update(impact_t *impact)
+{
+    impact->actor.media = MEDIA_IMPACT0 + impact->time / 2;
+
+    impact->time++;
+}
 
 bool ball_out(ball_t *ball);
 
@@ -380,7 +407,11 @@ void ball_update(actor_t *actor)
 
                 normalise(&ball->dx, &ball->dy);
 
-                /* TODO: cap speed */
+                impact_t *impact = malloc(sizeof(*impact));
+                impact_init(impact, actor->x + actor->w / 2 - new_dir_x * 10, actor->y + actor->h / 2);
+                impact->next = game.impact_list;
+                game.impact_list = impact;
+
                 ball->speed += 1;
 
                 game.ai_offset = (rand() % 20) - 10;
@@ -485,10 +516,26 @@ void game_update(void)
     game.bats[0].actor.update(&game.bats[0].actor);
     game.bats[1].actor.update(&game.bats[1].actor);
     game.ball.actor.update(&game.ball.actor);
+    for (impact_t *impact = game.impact_list; impact; impact = impact->next)
+        impact_update(impact);
 
-    /* TODO: update impacts*/
+    /* drop impacts*/
+    impact_t **head_pp = &game.impact_list;
+    impact_t *head = game.impact_list;
+    while (head) {
+        impact_t *to_free = NULL;
+        if (head->time >= 10){
+            *head_pp = head->next;
+            to_free = head;
+        }
+        head_pp = &head->next;
+        head = head->next;
 
-    /* TODO: drop expired impacts*/
+        if (to_free) {
+            free(to_free);
+            to_free = NULL;
+        }
+    }
 
     /* ball out */
     if (ball_out(&game.ball)) {
@@ -528,9 +575,8 @@ void game_draw(SDL_Surface *target_surface)
     game.bats[0].actor.draw(&game.bats[0].actor, target_surface);
     game.bats[1].actor.draw(&game.bats[1].actor, target_surface);
     game.ball.actor.draw(&game.ball.actor, target_surface);
-
-    /* impacts */
-    /* TODO: */
+    for (impact_t *impact = game.impact_list; impact; impact = impact->next)
+        impact->actor.draw(&impact->actor, target_surface);
 
     /* scores */
     int color = 0;
@@ -563,8 +609,6 @@ void game_draw(SDL_Surface *target_surface)
         target_rect = (SDL_Rect){ .x = 255 + 160 * 1 + 1 * 55, .y = 46 };
         SDL_BlitSurface(digit_surface, NULL, target_surface, &target_rect);
     }
-
-
 }
 
 SDL_Surface *load_surface(const char *path, SDL_Surface *screen_surface)
@@ -685,6 +729,7 @@ void draw(SDL_Surface *target_surface)
 int main(int argc, char *argv[])
 {
     (void) argc; (void) argv;
+
     srand(time(NULL));
 
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
