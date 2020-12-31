@@ -1,5 +1,7 @@
 A pure C and libSDL port of a game Boing! from the very cute [[https://github.com/Wireframe-Magazine/Code-the-Classics][Code the Classics]] book.
-Boing! itself is a modernised [[https://en.wikipedia.org/wiki/Pong][Pong]].
+Boing! itself is a modernised [[https://en.wikipedia.org/wiki/Pong][Pong]]:
+
+[[file:cboing-screenshot.png]]
 
 * Motivation
 
